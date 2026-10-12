@@ -1,0 +1,10 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+/wwwroot/article-thumbnails/

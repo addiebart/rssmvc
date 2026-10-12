@@ -1,0 +1,209 @@
+﻿@model RssAsp.Models.HomeViewModel
+
+@{
+    ViewData["Title"] = "Home";
+
+    var selectedSortOrder = $"{Model.SortCriteria}-{Model.SortDirection}";
+    var articleContainerClass = Model.ViewMode == "grid"
+        ? "mx-auto mt-7 flex w-full max-w-full flex-wrap justify-center gap-4"
+        : "mt-7 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-slate-800 dark:bg-[#202020]";
+    var articleClass = Model.ViewMode == "grid"
+        ? "flex aspect-square w-80 max-w-full flex-col justify-between gap-4 overflow-hidden rounded-lg border border-gray-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-[#202020]"
+        : "flex grow justify-between gap-4 border-b border-gray-100 px-5 py-3 last:border-b-0 dark:border-slate-800";
+    var articleContentClass = Model.ViewMode == "grid"
+        ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+        : "min-w-0 flex-1";
+    var contentWidthClass = Model.ViewMode == "grid" ? "w-full" : "max-w-280";
+}
+
+<div class="dark flex flex-1 flex-col bg-[#171717] text-gray-100 md:flex-row">
+    @* Sidebar containing the user's subscribed feeds. *@
+    <aside class="w-full shrink-0 border-b border-gray-200 bg-white p-4 dark:border-slate-800 dark:bg-[#1d1d1d] md:w-60 md:border-b-0 md:border-r" aria-label="Subscribed feeds">
+        <details id="feed-list-details">
+            <summary class="flex cursor-pointer list-none items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-gray-500 select-none [&::-webkit-details-marker]:hidden">
+                <span>Feeds</span>
+                <span class="flex items-center gap-2">
+                    <button id="add-feed-button" type="button" class="cursor-pointer rounded border border-gray-300 px-2 py-1 text-sm font-normal tracking-normal text-gray-600 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800" aria-label="Add a feed">+</button>
+                    <svg class="h-5 w-5 md:hidden" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M3 4h14v2H3V4Zm0 5h14v2H3V9Zm0 5h14v2H3v-2Z"/>
+                    </svg>
+                </span>
+            </summary>
+
+            <div class="mt-4 md:mt-0 md:block">
+                <nav role="radiogroup" aria-label="Feed selection">
+                    <div class="feed-selection-button flex cursor-pointer items-center justify-between rounded-md @(Model.SelectedSubscriptionId is null ? "bg-slate-100 text-gray-900 dark:bg-slate-800 dark:text-gray-100" : "text-gray-600 dark:text-gray-300") px-3 py-2.5" role="radio" aria-checked="@(Model.SelectedSubscriptionId is null ? "true" : "false")" tabindex="0">
+                        <span>All Feeds</span>
+                        <input type="radio" name="feed-selection" value="All posts" class="sr-only" checked="@(Model.SelectedSubscriptionId is null ? "checked" : null)" aria-label="View all posts">
+                    </div>
+
+                    @foreach (var subscription in Model.Subscriptions)
+                    {
+                        var isSelected = Model.SelectedSubscriptionId == subscription.Id;
+                        <div class="feed-item feed-selection-button flex cursor-pointer items-center justify-between rounded-md @(isSelected ? "bg-slate-100 text-gray-900 dark:bg-slate-800 dark:text-gray-100" : "text-gray-600 dark:text-gray-300") px-3 py-2.5" role="radio" aria-checked="@(isSelected ? "true" : "false")" tabindex="0" data-subscription-id="@subscription.Id">
+                            <span>@subscription.DisplayTitle</span>
+                            <span class="ml-3 flex items-center gap-2">
+                                <input type="radio" name="feed-selection" value="@subscription.Id" class="sr-only" checked="@(isSelected ? "checked" : null)" aria-label="View @subscription.DisplayTitle">
+                                <button type="button" class="remove-feed-button cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:focus:ring-red-800 focus:outline-none focus:ring-2 focus:ring-red-200" aria-label="Remove @subscription.DisplayTitle" data-subscription-id="@subscription.Id" data-subscription-title="@subscription.DisplayTitle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="block h-4 w-4" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <path d="M5.5 1.5A1.5 1.5 0 0 1 7 0h2a1.5 1.5 0 0 1 1.5 1.5V2H13a.5.5 0 0 1 0 1h-.5v10.5A2.5 2.5 0 0 1 10 16H6a2.5 2.5 0 0 1-2.5-2.5V3H3a.5.5 0 0 1 0-1h2.5v-.5ZM6 2h4v-.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V2Zm-1.5 1v10.5A1.5 1.5 0 0 0 6 15h4a1.5 1.5 0 0 0 1.5-1.5V3h-7ZM6 5.5a.5.5 0 0 1 1 0v6a.5.5 0 0 1-1 0v-6Zm3 0a.5.5 0 0 1 1 0v6a.5.5 0 0 1-1 0v-6Z"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        </div>
+                    }
+                </nav>
+            </div>
+        </details>
+    </aside>
+
+    @* Main article area, including sorting and view-mode controls. *@
+    <section class="mx-auto w-full @contentWidthClass p-6 md:p-9" aria-labelledby="posts-heading">
+        <div class="flex flex-col md:flex-row gap-2 items-center justify-between">
+            <div>
+                <p class="mb-1 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Your reading list</p>
+                <h1 id="posts-heading" class="mb-0 text-center md:text-left text-2xl font-semibold">
+                    @(
+                        Model.Subscriptions.FirstOrDefault(s => s.Id == Model.SelectedSubscriptionId)?.DisplayTitle ??
+                        (Model.SelectedSubscriptionId is null ? "All Articles" : "Articles")
+                    )
+                </h1>
+            </div>
+
+            <div class="flex flex-col items-end gap-2 flex-wrap">
+                <div class="flex items-center gap-4 flex-wrap">
+                    
+                    @* Changing the sort selector persists preferences through home.js. *@
+                    <form id="article-sort-form" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <label for="sort-order">Sort&nbsp;by</label>
+                        <select id="sort-order" name="sort-order" class="rounded border border-gray-300 bg-white px-2 py-1 text-gray-700 dark:border-slate-700 dark:bg-[#202020] dark:text-gray-200">
+                            <option value="date-desc" selected="@(selectedSortOrder == "date-desc")">Publish date (descending)</option>
+                            <option value="date-asc" selected="@(selectedSortOrder == "date-asc")">Publish date (ascending)</option>
+                            <option value="title-desc" selected="@(selectedSortOrder == "title-desc")">Title (descending)</option>
+                            <option value="title-asc" selected="@(selectedSortOrder == "title-asc")">Title (ascending)</option>
+                            <option value="description-desc" selected="@(selectedSortOrder == "description-desc")">Description (descending)</option>
+                            <option value="description-asc" selected="@(selectedSortOrder == "description-asc")">Description (ascending)</option>
+                        </select>
+                    </form>
+
+                    @* The view radios share the article form but are styled from ViewMode. *@
+                    <fieldset class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <legend class="sr-only">View</legend>
+                        <div class="flex items-center rounded border border-gray-300 bg-gray-100 dark:border-slate-700 dark:bg-[#202020]" role="radiogroup" aria-label="View">
+                            <input id="view-list" type="radio" name="view" value="list" form="article-sort-form" class="peer sr-only" checked="@(Model.ViewMode == "list" ? "checked" : null)">
+                            <label for="view-list" title="List view" aria-label="List view" class="inline-flex h-7 w-8 cursor-pointer items-center justify-center rounded-sm text-gray-500 @(Model.ViewMode == "list" ? "bg-white text-gray-900 dark:bg-slate-700 dark:text-gray-100 shadow-sm" : "") hover:text-gray-900 dark:hover:text-gray-100 peer-focus-visible:ring-2 peer-focus-visible:ring-gray-300">
+                                <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path d="M3 4h2v2H3V4Zm4 0h10v2H7V4ZM3 9h2v2H3V9Zm4 0h10v2H7V9Zm-4 5h2v2H3v-2Zm4 0h10v2H7v-2Z"/>
+                                </svg>
+                            </label>
+                            <input id="view-grid" type="radio" name="view" value="grid" form="article-sort-form" class="peer sr-only" checked="@(Model.ViewMode == "grid" ? "checked" : null)">
+                            <label for="view-grid" title="Grid view" aria-label="Grid view" class="inline-flex h-7 w-8 cursor-pointer items-center justify-center rounded-sm text-gray-500 @(Model.ViewMode == "grid" ? "bg-white text-gray-900 dark:bg-slate-700 dark:text-gray-100 shadow-sm" : "") hover:text-gray-900 dark:hover:text-gray-100 peer-focus-visible:ring-2 peer-focus-visible:ring-gray-300">
+                                <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path d="M3 3h6v6H3V3Zm8 0h6v6h-6V3ZM3 11h6v6H3v-6Zm8 0h6v6h-6v-6Z"/>
+                                </svg>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <span class="hidden text-xs text-gray-500 dark:text-gray-400 sm:inline">@Model.Articles.Count Articles</span>
+                </div>
+            </div>
+        </div>
+
+        @* Render each persisted article as a linked item when a URL is available. *@
+        <div class="@articleContainerClass">
+            @foreach (var article in Model.Articles)
+            {
+                <a asp-action="Article" asp-route-id="@article.Id" class="block text-inherit no-underline">
+                    <article class="@articleClass dark:text-gray-100">
+                    @if (!string.IsNullOrWhiteSpace(article.ThumbnailPath))
+                    {
+                        <img src="@article.ThumbnailPath"
+                             alt=""
+                             class="@(Model.ViewMode == "grid"
+                                         ? "h-32 w-full shrink-0 rounded object-cover"
+                                         : "h-20 w-20 shrink-0 rounded object-cover")">
+                    }
+
+                    <div class="@articleContentClass">
+                        <div class="flex items-start justify-between gap-4">
+                            <p class="m-0 min-w-0 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                                @(Model.FeedNamesByUrl.TryGetValue(article.Feed.FeedUrl, out var feedName)
+                                    ? feedName
+                                    : article.Feed.FeedUrl)
+                            </p>
+                            @if (Model.ViewMode != "grid")
+                            {
+                                <time class="shrink-0 text-xs text-gray-500 dark:text-gray-400" datetime="@article.PublishedAt.ToString("O")">@article.PublishedAt.ToLocalTime().ToString("g")</time>
+                            }
+                        </div>
+                        <h2 class="my-1 text-base font-semibold">@article.Title</h2>
+                        <div class="m-0 text-sm text-gray-500 dark:text-gray-400 line-clamp-6 md:line-clamp-7">
+                            @System.Text.RegularExpressions.Regex.Replace(article.Summary ?? string.Empty, "<[^>]*>", string.Empty)
+                        </div>
+                    </div>
+                    @if (Model.ViewMode == "grid")
+                    {
+                        <time class="shrink-0 text-xs text-gray-500 dark:text-gray-400" datetime="@article.PublishedAt.ToString("O")">@article.PublishedAt.ToLocalTime().ToString("g")</time>
+                    }
+                    </article>
+                </a>
+            }
+        </div>
+    </section>
+</div>
+
+@* Confirmation dialog used when removing a subscription from the sidebar. *@
+<dialog id="delete-feed-modal" class="dark m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-gray-200 bg-white p-0 text-gray-900 shadow-lg dark:border-slate-800 dark:bg-[#202020] dark:text-gray-100 backdrop:bg-gray-900/50">
+    <form id="delete-feed-form" method="post" class="p-6">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="subscriptionId" value="@Model.SelectedSubscriptionId">
+        <div class="mb-5 flex items-start justify-between gap-4">
+            <div>
+                <p class="mb-1 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Feeds</p>
+                <h2 class="text-xl font-semibold">Remove feed?</h2>
+            </div>
+            <button id="close-delete-feed-modal" type="button" class="cursor-pointer rounded p-1 text-xl leading-none text-gray-500 hover:bg-gray-100 hover:text-gray-900" aria-label="Close remove feed dialog">&times;</button>
+        </div>
+        <p class="mb-6 text-sm text-gray-600 dark:text-gray-300">Are you sure you want to remove <strong id="delete-feed-name"></strong>?</p>
+        <div class="flex justify-end gap-2">
+            <button id="cancel-delete-feed" type="button" class="cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800">Cancel</button>
+            <button type="submit" class="cursor-pointer rounded bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600">Remove feed</button>
+        </div>
+    </form>
+</dialog>
+
+@* Dialog containing the form for creating a new subscription. *@
+<dialog id="add-feed-modal" class="dark m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-gray-200 bg-white p-0 text-gray-900 shadow-lg dark:border-slate-800 dark:bg-[#202020] dark:text-gray-100 backdrop:bg-gray-900/50">
+    <form method="post" action="/Subscription/Create" class="p-6">
+        @Html.AntiForgeryToken()
+        <div class="mb-5 flex items-start justify-between gap-4">
+            <div>
+                <p class="mb-1 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Feeds</p>
+                <h2 class="text-xl font-semibold">Add a feed</h2>
+            </div>
+            <button id="close-add-feed-modal" type="button" class="cursor-pointer rounded p-1 text-xl leading-none text-gray-500 hover:bg-gray-100 hover:text-gray-900" aria-label="Close add feed dialog">
+                &times;
+            </button>
+        </div>
+
+        <label for="feed-name" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+        <input id="feed-name" name="DisplayTitle" type="text" required maxlength="250" placeholder="My favorite feed" class="mb-4 block w-full rounded border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 dark:border-slate-700 dark:bg-[#171717] dark:text-gray-100">
+
+        <label for="feed-url" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Feed URL</label>
+        <input id="feed-url" name="FeedUrl" type="url" required placeholder="https://example.com/feed.xml" class="mb-6 block w-full rounded border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 dark:border-slate-700 dark:bg-[#171717] dark:text-gray-100">
+
+        <div class="flex justify-end gap-2">
+            <button id="cancel-add-feed" type="button" class="cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800">
+                Cancel
+            </button>
+            <button type="submit" value="add" class="cursor-pointer rounded bg-gray-900 px-3 py-2 text-sm text-white hover:bg-gray-700 dark:bg-slate-700 dark:hover:bg-slate-600">
+                Add feed
+            </button>
+        </div>
+    </form>
+</dialog>
+
+@section Scripts {
+    <script src="~/js/home.js" asp-append-version="true"></script>
+}
